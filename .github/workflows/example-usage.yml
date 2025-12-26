@@ -1,0 +1,46 @@
+name: Example Usage
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '**.yaml'
+      - '**.yml'
+      - '**.json'
+      - '**.tf'
+
+jobs:
+  validate-configs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Validate config files
+        id: validate
+        uses: ./
+        with:
+          files: |
+            docker-compose*.yml
+            docker-compose*.yaml
+            compose.yml
+            compose.yaml
+            **/*.yaml
+            **/*.yml
+            **/*.json
+            **/*.tf
+          file-type: 'auto'
+          fail-on-error: 'true'
+      
+      - name: Display results
+        if: always()
+        run: |
+          echo "Validation Results:"
+          echo "  Valid: ${{ steps.validate.outputs.valid }}"
+          echo "  Files checked: ${{ steps.validate.outputs.files-checked }}"
+          echo "  Files passed: ${{ steps.validate.outputs.files-passed }}"
+          echo "  Files failed: ${{ steps.validate.outputs.files-failed }}"
+          if [ "${{ steps.validate.outputs.errors }}" != "" ]; then
+            echo "  Errors: ${{ steps.validate.outputs.errors }}"
+          fi
+

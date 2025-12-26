@@ -1,0 +1,73 @@
+name: 'Config File Validator'
+description: 'Validate YAML/JSON configuration files for Docker Compose, Kubernetes, Terraform, and other formats'
+author: 'Config File Validator'
+
+inputs:
+  files:
+    description: 'Comma-separated list of files or directories to validate. Supports glob patterns.'
+    required: true
+  file-type:
+    description: 'File type to validate (yaml, json, docker-compose, kubernetes, terraform, auto). Default: auto'
+    required: false
+    default: 'auto'
+  schema:
+    description: 'Path to JSON Schema file for JSON validation (optional)'
+    required: false
+  fail-on-error:
+    description: 'Whether to fail the action if validation errors are found. Default: true'
+    required: false
+    default: 'true'
+  working-directory:
+    description: 'Working directory for file paths. Default: .'
+    required: false
+    default: '.'
+
+outputs:
+  valid:
+    description: 'Whether all files passed validation'
+    value: ${{ steps.validate.outputs.valid }}
+  errors:
+    description: 'Validation errors found (if any)'
+    value: ${{ steps.validate.outputs.errors }}
+  files-checked:
+    description: 'Number of files checked'
+    value: ${{ steps.validate.outputs.files-checked }}
+  files-passed:
+    description: 'Number of files that passed validation'
+    value: ${{ steps.validate.outputs.files-passed }}
+  files-failed:
+    description: 'Number of files that failed validation'
+    value: ${{ steps.validate.outputs.files-failed }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+    
+    - name: Install dependencies
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r ${{ github.action_path }}/requirements.txt
+    
+    - name: Validate config files
+      id: validate
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        ${{ github.action_path }}/entrypoint.sh
+      env:
+        INPUT_FILES: ${{ inputs.files }}
+        INPUT_FILE_TYPE: ${{ inputs.file-type }}
+        INPUT_SCHEMA: ${{ inputs.schema }}
+        INPUT_FAIL_ON_ERROR: ${{ inputs.fail-on-error }}
+        GITHUB_ACTION_PATH: ${{ github.action_path }}
+
+branding:
+  icon: 'check-circle'
+  color: 'green'
+

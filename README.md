@@ -20,6 +20,62 @@ pip install -r requirements.txt
 
 ## Usage
 
+### GitHub Action
+
+This repository can be used as a GitHub Action in your workflows:
+
+```yaml
+name: Validate Config Files
+
+on:
+  pull_request:
+    paths:
+      - '**.yaml'
+      - '**.yml'
+      - '**.json'
+      - '**.tf'
+      - 'docker-compose*.yml'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Validate config files
+        uses: ./  # Use local action
+        # Or use: your-org/config-file-validator@v1
+        with:
+          files: |
+            docker-compose.yml
+            k8s/*.yaml
+            config/*.json
+          file-type: 'auto'  # auto, yaml, json, docker-compose, kubernetes, terraform
+          fail-on-error: 'true'
+      
+      - name: Check validation results
+        if: always()
+        run: |
+          echo "Valid: ${{ steps.validate.outputs.valid }}"
+          echo "Files checked: ${{ steps.validate.outputs.files-checked }}"
+          echo "Files passed: ${{ steps.validate.outputs.files-passed }}"
+          echo "Files failed: ${{ steps.validate.outputs.files-failed }}"
+```
+
+**Action Inputs:**
+- `files` (required): Comma-separated list of files or directories to validate. Supports glob patterns.
+- `file-type` (optional): File type to validate (`yaml`, `json`, `docker-compose`, `kubernetes`, `terraform`, `auto`). Default: `auto`
+- `schema` (optional): Path to JSON Schema file for JSON validation
+- `fail-on-error` (optional): Whether to fail the action if validation errors are found. Default: `true`
+- `working-directory` (optional): Working directory for file paths. Default: `.`
+
+**Action Outputs:**
+- `valid`: Whether all files passed validation
+- `errors`: Validation errors found (if any)
+- `files-checked`: Number of files checked
+- `files-passed`: Number of files that passed validation
+- `files-failed`: Number of files that failed validation
+
 ### Command Line
 
 ```bash
@@ -47,13 +103,13 @@ from validator import ConfigValidator
 validator = ConfigValidator()
 
 # Validate a file
-valid, errors = validator.validate_file('docker-compose.yml')
+valid, errors, file_type = validator.validate_file('docker-compose.yml')
 if not valid:
     for error in errors:
         print(f"Error: {error}")
 
 # Validate a directory
-valid, errors = validator.validate_directory('./configs/')
+valid, errors, file_types = validator.validate_directory('./configs/')
 ```
 
 ## Supported File Types
